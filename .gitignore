@@ -1,0 +1,12 @@
+node_modules
+wip
+dist
+coverage
+.nyc_output
+
+.ds_store
+npm-debug.log
+*.log
+
+
+
