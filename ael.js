@@ -2,28 +2,22 @@
 const chalk = require('chalk')
 
 let dictionary = {
+    THING: 'noun',
     rock: 'noun',
-    r: 'noun',
     screw: 'noun',
-    s: 'noun',
 
     the: 'article',
-    t: 'article',
 
     pick: 'verb',
-    p: 'verb',
     get: 'verb',
-    g: 'verb',
 
     quickly: 'adverb',
 
     red: 'adjective',
 
     up: 'preposition-adverb-postfix',
-    u: 'preposition-adverb-postfix',
 
     with: 'preposition-phrase-infix',
-    w: 'preposition-phrase-infix',
 }
 
 // console.log(dictionary)
@@ -51,14 +45,6 @@ function lex(input) {
 
         if (isWhiteSpace(char)) {
             advance()
-            // } else if (isOperator(char)) {
-            //     let op = char
-            //     advance()
-            //     if (isOperator(char) && isMultiCharOperator(op + char)) {
-            //         op += char
-            //         advance()
-            //     }
-            //     addToken(op)
         } else if (isPunctuation(char)) {
             addToken(char)
             advance()
@@ -84,37 +70,13 @@ function lex(input) {
                 word += char
             }
 
-            switch (dictionary[word]) {
-            case 'article':
-                break
-            case 'noun':
-                addToken('noun', word)
-                break
-            case 'verb':
-                addToken('verb', word)
-                break
-            case 'preposition-adverb-postfix':
-                addToken('preposition-adverb-postfix', word)
-                break
-            case 'preposition-phrase-infix':
-                addToken('preposition-phrase-infix', word)
-                break
-            case 'adjective':
-                addToken('adjective', word)
-                break
-            case 'adverb':
-                addToken('adverb', word)
-                break
-            default:
-                throw new Error(`I'm sorry, I don't know the word ${word}`)
-            }
+            let type = dictionary[word]
 
-        // } else if (isIdentifier(char)) {
-        //     let identifier = char
-        //     while (isIdentifier(advance())) {
-        //         identifier += char
-        //     }
-        //     addToken('identifier', identifier)
+            if (typeof type === 'undefined') {
+                throw new Error(`I'm sorry, I don't know the word ${word}`)
+            } else if (type !== 'article') {
+                addToken(type, word)
+            }
         } else {
             throw new Error(`Unrecognized token "${char}"`)
         }
@@ -142,17 +104,12 @@ function isWhiteSpace(c) {
 }
 
 function isLetter(c) {
-    return typeof c === 'string' && !isOperator(c) && !isDigit(c) && !isWhiteSpace(c) && !isPunctuation(c)
-}
-
-function isMultiCharOperator(op) {
-    return /\+\+/.test(op)
+    return /[A-z]/.test(c)
+    // return typeof c === 'string' && !isOperator(c) && !isDigit(c) && !isWhiteSpace(c) && !isPunctuation(c)
 }
 
 /*
-
 parser
-
 */
 
 function parse(tokens) {
@@ -187,8 +144,6 @@ function parse(tokens) {
     function expression(rbp) {
         let tok = token()
         advance()
-
-        // console.log(tok.nud)
 
         if (!tok.nud) {
             throw new Error(`Unexpected token1: ${tok.type}`)
@@ -230,15 +185,16 @@ function parse(tokens) {
         symbol(id, nud)
     }
 
-    // function postfix(id, lbp, led) {
-    //     led = led || function(left) {
-    //         return {
-    //             type: id,
-    //             object: left,
-    //         }
-    //     }
-    //     symbol(id, null, lbp, led)
-    // }
+    function postfix(id, lbp, led) {
+        led = led || function(left) {
+            return {
+                type: id,
+                word: this.word,
+                object: left,
+            }
+        }
+        symbol(id, null, lbp, led)
+    }
 
     function mixfix(id, rbp, lbp, led) {
         led = led || function(left) {
@@ -259,7 +215,7 @@ function parse(tokens) {
     }
 
     function verb(id, rbp) {
-        symbol(id, function() {
+        let nud = function() {
             let tok = token()
             if (tok.type === 'preposition-adverb-postfix') {
                 advance()
@@ -275,17 +231,15 @@ function parse(tokens) {
                 word: this.word,
                 object: expression(rbp),
             }
-        })
+        }
+        symbol(id, nud)
     }
 
-    // p the rock u and d the thing
-    // prefix('get', 3)
     verb('verb', 3)
-    // mixfix('u', 4, 4)
+
     symbol('noun', noun => noun)
     prefix('adjective', 7)
-    // symbol('verb', verb => verb)
-    // mixfix('preposition', 4, 4)
+
     symbol('preposition-adverb-postfix', null, 3, function(left) {
         return {
             type: 'preposition-adverb-postfix',
@@ -332,24 +286,9 @@ function parse(tokens) {
 
     symbol('(end)')
 
+    symbol('number', number => number)
+
     /* eslint-disable no-lone-blocks */
-    {
-        /*
-        prefix('-', 7)
-        infix('^', 5, 6)
-        infix('*', 4)
-        infix('/', 4)
-        infix('%', 4)
-        infix('+', 3)
-        infix('-', 3)
-
-        symbol(',')
-        symbol(')')
-
-        symbol('number', number => number)
-*/
-    }
-
     {
         /*
         postfix('++', 7, (left) => {
@@ -428,9 +367,7 @@ function parse(tokens) {
 }
 
 /*
-
 evaluator
-
 */
 
 function evaluate(parseTree) {
@@ -547,7 +484,6 @@ function calculate(input) {
         console.log()
         let parseTree = parse(tokens)
         console.log()
-        // console.log(JSON.stringify(parseTree, null, 4))
         prettyLog(parseTree)
         // console.log()
         // let output = evaluate(parseTree)
@@ -560,63 +496,12 @@ function calculate(input) {
 // pick the rock up quickly with the screw.
 let error = calculate(`
 
-pick the red rock quickly up with the red screw.
+pick the rock quickly up with the red THING.
 
 `
 
-// pick(rock) up quickly with
-
-// quickly(up(pick(rock))) with screw
-
-// with(up(pick(rock)), screw)
-
-// up(pick(with(rock, screw)))
-// pick the red rock quickly up with the red screw.
-
-// (pick(rock) )up with
-
-// (-5)++ / 5
-// (-(5/5))++
-    // p 4 u
-    // p u 4
-    // get 4
-    // 6 / 3 + 5
-    // 4/1++
 )
 
 if (error) {
     console.log(error)
-}
-
-{
-    // (4/1)++
-    // 2--1
-    // 2/2+1
-
-    // (1 + 3)
-    // 1 - 1
-    // console.log(calculate(`
-    // thing = 4
-    // get(thing)
-    // `
-    // ))
-
-    // console.log(you.inventory)
-    // console.log(calculate(`
-    //     sixty = 60
-    //     secondsInMin = sixty
-    //     minInHour = secondsInMin
-    //     hoursInDay = 24
-    //     daysInWeek = 7
-    //     minsInWeek(weeks) = weeks * minInHour * hoursInDay * daysInWeek
-    //     minsInWeek(4)
-
-    //     minsInWeek(1) / 15
-
-    //     0
-    //     0
-
-    //     100^0
-    //     `
-    // ))
 }
