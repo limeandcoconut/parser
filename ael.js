@@ -263,8 +263,8 @@ function parse(tokens) {
         let self = {
             type: 'preposition-phrase-infix',
             word: this.word,
-            left: left,
-            right: expression(7),
+            direct: left,
+            indirect: expression(7),
         }
 
         if (!parent) {
@@ -372,83 +372,61 @@ evaluator
 
 function evaluate(parseTree) {
 
-    let operators = {
-        '+': (a, b) => a + b,
-        '-': (a, b) => (typeof b === 'undefined') ? -a : a - b,
-        '*': (a, b) => a * b,
-        '/': (a, b) => a / b,
-        '%': (a, b) => a % b,
-        '^': (a, b) => Math.pow(a, b),
-        '++': (a) => a + 1,
-    }
+    let verbs = {
+        pick: {
+            basal: (node) => node,
+            variations: [
 
-    let variables = {
-        pi: Math.PI,
-        e: Math.E,
-    }
-
-    let functions = {
-        sin: Math.sin,
-        cos: Math.cos,
-        tan: Math.tan, // WAT?
-        asin: Math.asin,
-        acos: Math.acos,
-        atan: Math.atan,
-        abs: Math.abs,
-        round: Math.round,
-        ceil: Math.ceil,
-        floor: Math.floor,
-        log: Math.log,
-        exp: Math.exp,
-        sqrt: Math.sqrt,
-        max: Math.max,
-        min: Math.min,
-        random: Math.random,
-        pow: Math.pow,
+            ],
+        },
     }
 
     let args = {}
 
+    let context = {}
+
     function parseNode(node) {
+        if (!node) {
+            return
+        }
         if (node.type === 'number') {
             return node.value
-        } else if (operators[node.type]) {
-            if (node.left && node.right) {
-                return operators[node.type](parseNode(node.left), parseNode(node.right))
-            } else if (node.left) {
-                return operators[node.type](parseNode(node.left))
-            }
-            return operators[node.type](parseNode(node.right))
-        } else if (node.type === 'identifier') {
-            let value = Object.prototype.hasOwnProperty.call(args, node.value) ?
-                args[node.value] :
-                variables[node.value]
-
-            if (typeof value === 'undefined') {
-                throw new Error(`${node.value} is undefined`)
-            }
-            return value
-        } else if (node.type === 'assign') {
-            variables[node.name] = parseNode(node.value)
-        } else if (node.type === 'call') {
-            for (let i = 0; i < node.args.length; i++) {
-                node.args[i] = parseNode(node.args[i])
-            }
-
-            // console.log(functions)
-            // console.log(node)
-            return functions[node.name].apply(null, node.args)
-        } else if (node.type === 'function') {
-            // Must not an be arrow function so that 'arguments' is generated.
-            functions[node.name] = function() {
-                for (var i = 0; i < node.args.length; i++) {
-                    args[node.args[i].value] = arguments[i]
-                }
-                var ret = parseNode(node.value)
-                args = {}
-                return ret
-            }
+        // } else if (operators[node.type]) {
+        //     if (node.left && node.right) {
+        //         return operators[node.type](parseNode(node.left), parseNode(node.right))
+        //     } else if (node.left) {
+        //         return operators[node.type](parseNode(node.left))
+        //     }
+        //     return operators[node.type](parseNode(node.right))
+        } else if (node.type === 'preposition-adverb-postfix') {
+            context.verb = context.verb || ''
+            context.verb += ' ' + node.word
+            parseNode(node.object)
+        } else if (node.type === 'adverb') {
+            context.adverb = context.adverb || ''
+            context.adverb += ' ' + node.word
+            parseNode(node.object)
+        } else if (node.type === 'verb') {
+            context.verb = context.verb || ''
+            context.verb = node.word + ' ' + context.verb
+            parseNode(node.object)
+        } else if (node.type === 'adjective') {
+            context.adjective = context.adjective || ''
+            context.adjective = node.word + ' ' + context.adjective
+            parseNode(context.adjecti)
+        // } else if (node.type === 'function') {
+        //     // Must not an be arrow function so that 'arguments' is generated.
+        //     functions[node.name] = function() {
+        //         for (var i = 0; i < node.args.length; i++) {
+        //             args[node.args[i].value] = arguments[i]
+        //         }
+        //         var ret = parseNode(node.value)
+        //         args = {}
+        //         return ret
+        //     }
         }
+        console.log(context)
+        // return context
     }
 
     let output = ''
@@ -485,8 +463,9 @@ function calculate(input) {
         let parseTree = parse(tokens)
         console.log()
         prettyLog(parseTree)
-        // console.log()
-        // let output = evaluate(parseTree)
+        console.log()
+        let output = evaluate(parseTree)
+        console.log(output)
         // return output
     } catch (e) {
         return e
@@ -496,7 +475,7 @@ function calculate(input) {
 // pick the rock up quickly with the screw.
 let error = calculate(`
 
-pick the rock quickly up with the red THING.
+pick the red rock quickly up with the red screw.
 
 `
 
