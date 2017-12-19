@@ -3,8 +3,18 @@
 
 let dictionary = {
     THING: 'noun',
+    thing: 'noun',
+    thign: 'noun',
+
     rock: 'noun',
+
     screw: 'noun',
+    bolt: 'noun',
+    fixture: 'noun',
+
+    t: 'noun',
+
+    // 'thing-thing': 'noun',
 
     the: 'article',
 
@@ -14,10 +24,13 @@ let dictionary = {
     quickly: 'adverb',
 
     red: 'adjective',
+    rusty: 'adjective',
 
     up: 'preposition-adverb-postfix',
 
     with: 'preposition-phrase-infix',
+
+    and: 'conjunction',
 }
 
 // console.log(dictionary)
@@ -26,8 +39,6 @@ function lex(input) {
     let tokens = []
     let char
     let i = 0
-    // console.log(input)
-    // input += '\n'
 
     let advance = () => {
         i++
@@ -70,10 +81,6 @@ function lex(input) {
 
             while (isLetter(advance())) {
                 word += char
-                if (word.length > 5) {
-                    throw new Error('foo ' + word)
-                    return
-                }
             }
 
             let type = dictionary[word]
@@ -102,19 +109,15 @@ function isPunctuation(c) {
 }
 
 function isDigit(c) {
-    console.log(c)
     return /[0-9]/.test(c)
 }
 
 function isWhiteSpace(c) {
-    throw 'here'
     return /\s/.test(c)
 }
 
 function isLetter(c) {
-    console.log(c)
-    console.log(/^[A-z]{1}$/.test(c))
-    return /^[A-z]{1}$/.test(c)
+    return /^[A-z\-]{1}$/.test(c)
     // return typeof c === 'string' && !isOperator(c) && !isDigit(c) && !isWhiteSpace(c) && !isPunctuation(c)
 }
 
@@ -248,7 +251,21 @@ function parse(tokens) {
     verb('verb', 3)
 
     symbol('noun', noun => noun)
-    prefix('adjective', 7)
+    symbol('adjective', function() {
+        let object
+        if (token().type !== 'noun' && token().type !== 'adjective') {
+            object = {
+                type: 'noun-standin',
+            }
+        } else {
+            object = expression(7)
+        }
+        return {
+            type: 'adjective',
+            word: this.word,
+            object,
+        }
+    })
 
     symbol('preposition-adverb-postfix', null, 3, function(left) {
         return {
@@ -293,6 +310,28 @@ function parse(tokens) {
             return expression(0)
         }
     })
+
+    symbol('conjunction',
+        function() {
+            return expression(0)
+        },
+        6,
+        function(left) {
+            if (token().type === '(end)') {
+                throw new Error('Unexpected end of statement.')
+            }
+            console.log('tt' + token().type)
+            if (token().type !== 'noun' && token().type !== 'adjective') {
+                return left
+            }
+            return {
+                type: 'conjunction',
+                word: this.word,
+                left: left,
+                right: expression(0),
+            }
+        },
+    )
 
     symbol('(end)')
 
@@ -377,79 +416,6 @@ function parse(tokens) {
 }
 
 /*
-evaluator
-*/
-
-function evaluate(parseTree) {
-
-    let verbs = {
-        pick: {
-            basal: (node) => node,
-            variations: [
-
-            ],
-        },
-    }
-
-    let args = {}
-
-    let context = {}
-
-    function parseNode(node) {
-        if (!node) {
-            return
-        }
-        if (node.type === 'number') {
-            return node.value
-            // } else if (operators[node.type]) {
-            //     if (node.left && node.right) {
-            //         return operators[node.type](parseNode(node.left), parseNode(node.right))
-            //     } else if (node.left) {
-            //         return operators[node.type](parseNode(node.left))
-            //     }
-            //     return operators[node.type](parseNode(node.right))
-        } else if (node.type === 'preposition-adverb-postfix') {
-            context.verb = context.verb || ''
-            context.verb += ' ' + node.word
-            parseNode(node.object)
-        } else if (node.type === 'adverb') {
-            context.adverb = context.adverb || ''
-            context.adverb += ' ' + node.word
-            parseNode(node.object)
-        } else if (node.type === 'verb') {
-            context.verb = context.verb || ''
-            context.verb = node.word + ' ' + context.verb
-            parseNode(node.object)
-        } else if (node.type === 'adjective') {
-            context.adjective = context.adjective || ''
-            context.adjective = node.word + ' ' + context.adjective
-            parseNode(context.adjecti)
-            // } else if (node.type === 'function') {
-            //     // Must not an be arrow function so that 'arguments' is generated.
-            //     functions[node.name] = function() {
-            //         for (var i = 0; i < node.args.length; i++) {
-            //             args[node.args[i].value] = arguments[i]
-            //         }
-            //         var ret = parseNode(node.value)
-            //         args = {}
-            //         return ret
-            //     }
-        }
-        console.log(context)
-        // return context
-    }
-
-    let output = ''
-    for (let i = 0; i < parseTree.length; i++) {
-        let value = parseNode(parseTree[i])
-        if (typeof value !== 'undefined') {
-            output += value + '\n'
-        }
-    }
-    return output
-}
-
-/*
 
 calculate
 
@@ -465,45 +431,13 @@ calculate
 //     return object
 // }
 
-function calculate(input) {
-    console.timeEnd('call')
-    console.log(input)
+module.exports = (input) => {
     try {
-        console.time('parser')
-        // throw 'parser'
         let tokens = lex(input)
-        console.log(tokens)
-        console.log()
         let parseTree = parse(tokens)
-        console.log()
-        let ret = JSON.stringify(parseTree, null, 4)
-        console.log(ret)
-        console.timeEnd('parser')
-        return ret
-        // let output = evaluate(parseTree)
-        // console.log(output)
-        // return output
-        // return
+        return parseTree
     } catch (e) {
         console.log(e)
-        console.timeEnd('parser')
         return e
     }
 }
-
-module.exports = calculate
-
-// pick the rock up quickly with the screw.
-// let error = calculate(`
-
-// pick the red rock quickly up with the red screw.
-
-// `
-
-// )
-
-// if (error) {
-//     console.log(error)
-// }
-
-// export default calculate

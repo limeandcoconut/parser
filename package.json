@@ -1,5 +1,18 @@
 {
+  "name": "parser",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "github.com/limeandcoconut/parser"
+  },
+  "keywords": [],
+  "author": "limeandcoconut",
+  "license": "ISC",
   "dependencies": {
     "chalk": "^2.3.0"
-  }
+  },
+  "devDependencies": {}
 }
